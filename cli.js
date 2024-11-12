@@ -99,6 +99,9 @@ program
           [`$feature/${flag}`]: variant,
         },
       });
+      console.log(
+        `Sent $feature_flag_called for ${distinctId} at ${firstEventTimestamp} (${variant} group)`
+      );
       posthog.capture({
         event: defaultEvents[0],
         distinctId,
