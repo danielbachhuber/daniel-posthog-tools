@@ -2,6 +2,8 @@
 
 Some CLI commands for when you're building PostHog locally.
 
+Note: The script initially couldn't write to PostHog running on `localhost:8000`. I commented out `# ::1     localhost` in `/etc/hosts` and it worked. Not sure why!
+
 ## Using
 
 ### Create sample data for an experiment
