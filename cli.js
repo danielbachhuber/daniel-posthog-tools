@@ -65,9 +65,6 @@ program
           event,
           distinctId,
           timestamp,
-          properties: {
-            [`$feature/${flag}`]: "control",
-          },
         });
         console.log(`Sent ${event} for ${distinctId} at ${timestamp}`);
       }
@@ -83,25 +80,14 @@ program
     for (let i = 0; i < 100; i++) {
       const distinctId = `test-user-${generateRandomString(10)}@example.com`;
 
-      // Randomly assign users to control (50%) or test (50%) variant
-      const variant = Math.random() < 0.5 ? "control" : "test";
+      const variant = await posthog.getFeatureFlag(flag, distinctId);
+      console.log(`${flag} variant for ${distinctId} is ${variant}`);
 
       // Generate random timestamp between start_date and now for first event
       const firstEventTime = startDate + Math.random() * (now - startDate);
       const firstEventTimestamp = new Date(firstEventTime).toISOString();
 
       // Send first event for all users
-      posthog.capture({
-        event: "$feature_flag_called",
-        distinctId,
-        timestamp: firstEventTimestamp,
-        properties: {
-          [`$feature/${flag}`]: variant,
-        },
-      });
-      console.log(
-        `Sent $feature_flag_called for ${distinctId} at ${firstEventTimestamp} (${variant} group)`
-      );
       posthog.capture({
         event: defaultEvents[0],
         distinctId,
