@@ -8,7 +8,6 @@ dotenv.config();
 
 const posthog = new PostHog(process.env.POSTHOG_API_KEY, {
   host: process.env.POSTHOG_HOST,
-  historicalMigration: true,
 });
 
 program
@@ -92,6 +91,14 @@ program
       const firstEventTimestamp = new Date(firstEventTime).toISOString();
 
       // Send first event for all users
+      posthog.capture({
+        event: "$feature_flag_called",
+        distinctId,
+        timestamp: firstEventTimestamp,
+        properties: {
+          [`$feature/${flag}`]: variant,
+        },
+      });
       posthog.capture({
         event: defaultEvents[0],
         distinctId,
