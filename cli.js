@@ -80,6 +80,7 @@ program
     for (let i = 0; i < 100; i++) {
       const distinctId = `test-user-${generateRandomString(10)}@example.com`;
 
+      // Feature flag requests aren't backdated, unforunately.
       const variant = await posthog.getFeatureFlag(flag, distinctId);
       console.log(`${flag} variant for ${distinctId} is ${variant}`);
 
