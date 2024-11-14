@@ -194,6 +194,7 @@ program
         )}`
       );
       await connection.end();
+      await posthog.shutdown();
       console.log("The end");
       return;
     }
