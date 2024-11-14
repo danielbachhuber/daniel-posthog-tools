@@ -3,6 +3,7 @@
 import { program } from "commander";
 import { PostHog } from "posthog-node";
 import dotenv from "dotenv";
+import mysql from "mysql2/promise";
 
 dotenv.config();
 
@@ -128,6 +129,127 @@ program
 
     await posthog.shutdown();
     console.log(`Sent events for ${flag} experiment`);
+  });
+
+program
+  .command("mock-data-warehouse-experiment")
+  .argument("<flag>", "The flag associated with the experiment")
+  .option(
+    "--start_date <date>",
+    "Start date for events",
+    new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
+  )
+  .option(
+    "--send-initial-events",
+    "Send the initial events for the experiment",
+    false
+  )
+  .action(async (flag, options) => {
+    console.log(`Mocking data warehouse experiment for ${flag}`);
+
+    // Create MySQL connection
+    let connection;
+    try {
+      connection = await mysql.createConnection({
+        host: process.env.MYSQL_HOST,
+        user: process.env.MYSQL_USER,
+        password: process.env.MYSQL_PASSWORD,
+        database: process.env.MYSQL_DATABASE,
+      });
+    } catch (error) {
+      console.error("Error creating MySQL connection:", error);
+      return;
+    }
+
+    // Create payments table if it doesn't exist
+    try {
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS payments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        timestamp DATETIME,
+        distinct_id VARCHAR(255),
+        amount DECIMAL(10,2)
+        )
+      `);
+      console.log("Created payments table");
+    } catch (error) {
+      console.error("Error creating payments table:", error);
+      return;
+    }
+
+    if (options.sendInitialEvents) {
+      const distinctId = `test-user-${generateRandomString(10)}@example.com`;
+      const variant = await posthog.getFeatureFlag(flag, distinctId);
+      console.log(`${flag} variant for ${distinctId} is ${variant}`);
+      await posthog.shutdown();
+      console.log(`Sent initial event for ${flag}`);
+      const amount = 5 + Math.random() * 5;
+      await connection.execute(
+        "INSERT INTO payments (timestamp, distinct_id, amount) VALUES (NOW(), ?, ?)",
+        [distinctId, amount]
+      );
+      console.log(
+        `Created payment record for ${distinctId} with amount ${amount.toFixed(
+          2
+        )}`
+      );
+      await connection.end();
+      console.log("The end");
+      return;
+    }
+
+    const startDate = new Date(options.start_date).getTime();
+    const now = Date.now();
+
+    for (let i = 0; i < 200; i++) {
+      const distinctId = `test-user-${generateRandomString(10)}@example.com`;
+
+      // Generate random timestamp between start date and now
+      const timestamp = new Date(startDate + Math.random() * (now - startDate));
+
+      posthog.capture({
+        event: `[${flag}] seen`,
+        distinctId,
+        timestamp: timestamp.toISOString(),
+      });
+      console.log(`Sent seen event for ${distinctId}`);
+
+      // 60% chance to get feature flag
+      let variant;
+      if (Math.random() < 0.6) {
+        variant = await posthog.getFeatureFlag(flag, distinctId);
+        console.log(`${flag} variant for ${distinctId} is ${variant}`);
+      }
+
+      // 80% chance to generate payment
+      if (Math.random() < 0.8) {
+        const amount = 2 + Math.random() * 18; // Random amount between 2 and 20
+
+        const paymentTimestamp = new Date(
+          timestamp.getTime() + Math.random() * (now - timestamp.getTime())
+        );
+
+        await connection.execute(
+          "INSERT INTO payments (timestamp, distinct_id, amount) VALUES (?, ?, ?)",
+          [paymentTimestamp, distinctId, amount]
+        );
+        console.log(
+          `Created payment record for ${distinctId} with amount ${amount.toFixed(
+            2
+          )}`
+        );
+        posthog.capture({
+          event: `[${flag}] payment`,
+          distinctId,
+          timestamp: paymentTimestamp.toISOString,
+          properties: variant ? { [`$feature/${flag}`]: variant } : undefined,
+        });
+      }
+    }
+
+    await posthog.shutdown();
+
+    await connection.end();
   });
 
 if (process.argv.length === 2) {
