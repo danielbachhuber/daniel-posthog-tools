@@ -184,9 +184,18 @@ program
       await posthog.shutdown();
       console.log(`Sent initial event for ${flag}`);
       const amount = 5 + Math.random() * 5;
+      const now = new Date();
+      const mysqlDatetime = `${now.getUTCFullYear()}-${String(
+        now.getUTCMonth() + 1
+      ).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")} ${String(
+        now.getUTCHours()
+      ).padStart(2, "0")}:${String(now.getUTCMinutes()).padStart(
+        2,
+        "0"
+      )}:${String(now.getUTCSeconds()).padStart(2, "0")}`;
       await connection.execute(
-        "INSERT INTO payments (timestamp, distinct_id, amount) VALUES (NOW(), ?, ?)",
-        [distinctId, amount]
+        "INSERT INTO payments (timestamp, distinct_id, amount) VALUES (?, ?, ?)",
+        [mysqlDatetime, distinctId, amount]
       );
       console.log(
         `Created payment record for ${distinctId} with amount ${amount.toFixed(
@@ -205,15 +214,16 @@ program
     for (let i = 0; i < 200; i++) {
       const distinctId = `test-user-${generateRandomString(10)}@example.com`;
 
-      // Generate random timestamp between start date and now
-      const timestamp = new Date(startDate + Math.random() * (now - startDate));
-
       posthog.capture({
         event: `[${flag}] seen`,
         distinctId,
-        timestamp: timestamp.toISOString(),
       });
       console.log(`Sent seen event for ${distinctId}`);
+
+      // Sleep for 1-3 seconds
+      await new Promise((resolve) =>
+        setTimeout(resolve, 1000 + Math.random() * 2000)
+      );
 
       // 60% chance to get feature flag
       let variant;
@@ -226,13 +236,23 @@ program
       if (Math.random() < 0.8) {
         const amount = 2 + Math.random() * 18; // Random amount between 2 and 20
 
-        const paymentTimestamp = new Date(
-          timestamp.getTime() + Math.random() * (now - timestamp.getTime())
+        // Sleep for 1-3 seconds
+        await new Promise((resolve) =>
+          setTimeout(resolve, 1000 + Math.random() * 2000)
         );
+        const now = new Date();
+        const mysqlDatetime = `${now.getUTCFullYear()}-${String(
+          now.getUTCMonth() + 1
+        ).padStart(2, "0")}-${String(now.getUTCDate()).padStart(
+          2,
+          "0"
+        )} ${String(now.getUTCHours()).padStart(2, "0")}:${String(
+          now.getUTCMinutes()
+        ).padStart(2, "0")}:${String(now.getUTCSeconds()).padStart(2, "0")}`;
 
         await connection.execute(
           "INSERT INTO payments (timestamp, distinct_id, amount) VALUES (?, ?, ?)",
-          [paymentTimestamp, distinctId, amount]
+          [mysqlDatetime, distinctId, amount]
         );
         console.log(
           `Created payment record for ${distinctId} with amount ${amount.toFixed(
@@ -242,7 +262,6 @@ program
         posthog.capture({
           event: `[${flag}] payment`,
           distinctId,
-          timestamp: paymentTimestamp.toISOString,
           properties: variant ? { [`$feature/${flag}`]: variant } : undefined,
         });
       }

@@ -15,3 +15,7 @@ Note: The script initially couldn't write to PostHog running on `localhost:8000`
 5. For a funnel experiment, set `$pageview` as the first conversion goal step, and `[daniel-funnel-experiment-nov-12-v2] signup` as the second conversion goal step.
 6. Launch the experiment, and then set the start date to two weeks prior.
 7. Run `daniel-posthog-tools mock-experiment-events funnel daniel-funnel-experiment-nov-12-v2` to populate some data. It's safe to run multiple times.
+
+Other notes:
+
+- If you run `daniel-posthog-tools mock-data-warehouse-experiment`, you'll need to run the temporal server to injest the data warehouse table _after_ you generate all of the events. You'll also need to manually run a sync.
