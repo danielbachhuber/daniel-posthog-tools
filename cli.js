@@ -62,10 +62,15 @@ program
         const timestamp = new Date(
           Date.now() - 12 * 60 * 60 * 1000
         ).toISOString();
+        let properties = {};
+        if (event === "$pageview") {
+          properties["$current_url"] = "/products";
+        }
         posthog.capture({
           event,
           distinctId,
           timestamp,
+          properties,
         });
         console.log(`Sent ${event} for ${distinctId} at ${timestamp}`);
       }
@@ -81,22 +86,35 @@ program
     for (let i = 0; i < 100; i++) {
       const distinctId = `test-user-${generateRandomString(10)}@example.com`;
 
-      // Feature flag requests aren't backdated, unforunately.
-      const variant = await posthog.getFeatureFlag(flag, distinctId);
-      console.log(`${flag} variant for ${distinctId} is ${variant}`);
-
       // Generate random timestamp between start_date and now for first event
       const firstEventTime = startDate + Math.random() * (now - startDate);
       const firstEventTimestamp = new Date(firstEventTime).toISOString();
 
+      // Randomly assign control or test variant with 50/50 split
+      const variant = Math.random() < 0.5 ? "control" : "test";
+      posthog.capture({
+        event: "$feature_flag_called",
+        distinctId,
+        timestamp: firstEventTimestamp,
+        properties: {
+          [`$feature_flag`]: flag,
+          [`$feature/${flag}`]: variant,
+        },
+      });
+      console.log(`${flag} variant for ${distinctId} is ${variant}`);
+
       // Send first event for all users
+      let properties = {
+        [`$feature/${flag}`]: variant,
+      };
+      if (defaultEvents[0] === "$pageview") {
+        properties["$current_url"] = "/products";
+      }
       posthog.capture({
         event: defaultEvents[0],
         distinctId,
         timestamp: firstEventTimestamp,
-        properties: {
-          [`$feature/${flag}`]: variant,
-        },
+        properties,
       });
       console.log(
         `Sent ${defaultEvents[0]} for ${distinctId} at ${firstEventTimestamp} (${variant} group)`
