@@ -27,6 +27,140 @@ function generateRandomString(length) {
 }
 
 program
+  .command("mock-funnel-experiment-with-trend-metrics")
+  .argument("<flag>", "The flag associated with the experiment")
+  .option(
+    "--send-initial-events",
+    "Send the initial events for the experiment",
+    false
+  )
+  .action(async (flag, options) => {
+    const funnelEvents = [`[${flag}] seen`, `[${flag}] payment`];
+    const trendEvents = [`[${flag}] event one`, `[${flag}] event two`];
+    const propertyAmountEvent = `[${flag}] property amount`;
+
+    if (options.sendInitialEvents) {
+      const distinctId = `test-user-${generateRandomString(10)}@example.com`;
+
+      for (const event of funnelEvents) {
+        const timestamp = new Date(
+          Date.now() - 12 * 60 * 60 * 1000
+        ).toISOString();
+        posthog.capture({
+          event,
+          distinctId,
+          timestamp,
+        });
+        console.log(`Sent ${event} for ${distinctId} at ${timestamp}`);
+      }
+      for (const event of trendEvents) {
+        const timestamp = new Date(
+          Date.now() - 12 * 60 * 60 * 1000
+        ).toISOString();
+        posthog.capture({
+          event,
+          distinctId,
+          timestamp,
+        });
+      }
+      await posthog.shutdown();
+      console.log(`Sent initial events for ${flag}`);
+      return;
+    }
+
+    const startDate = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).getTime();
+    const now = Date.now();
+
+    for (let i = 0; i < 100; i++) {
+      const distinctId = `test-user-${generateRandomString(10)}@example.com`;
+
+      // Generate random timestamp between start_date and now for first event
+      const firstEventTime = startDate + Math.random() * (now - startDate);
+      const firstEventTimestamp = new Date(firstEventTime).toISOString();
+
+      // Randomly assign control or test (50/50 split)
+      const random = Math.random();
+      const variant = random < 0.5 ? "control" : "test";
+      posthog.capture({
+        event: "$feature_flag_called",
+        distinctId,
+        timestamp: firstEventTimestamp,
+        properties: {
+          [`$feature_flag`]: flag,
+          [`$feature_flag_response`]: variant,
+        },
+      });
+      console.log(`${flag} variant for ${distinctId} is ${variant}`);
+
+      for (const event of funnelEvents) {
+        // Only send event with probability based on variant
+        const shouldSendFunnelEvent =
+          variant === "control" ? Math.random() < 0.8 : Math.random() < 0.7;
+        if (shouldSendFunnelEvent) {
+          const timestamp = new Date(
+            firstEventTime + Math.random() * (now - firstEventTime)
+          ).toISOString();
+          posthog.capture({
+            event,
+            distinctId,
+            timestamp,
+            properties: {
+              [`$feature/${flag}`]: variant,
+            },
+          });
+          console.log(
+            `Sent ${event} for ${distinctId} at ${timestamp} (${variant} group)`
+          );
+        }
+      }
+
+      for (const event of trendEvents) {
+        const shouldSendTrendEvent =
+          variant === "control" ? Math.random() < 0.4 : Math.random() < 0.5;
+        if (shouldSendTrendEvent) {
+          const timestamp = new Date(
+            firstEventTime + Math.random() * (now - firstEventTime)
+          ).toISOString();
+          posthog.capture({
+            event,
+            distinctId,
+            timestamp,
+            properties: {
+              [`$feature/${flag}`]: variant,
+            },
+          });
+          console.log(
+            `Sent ${event} for ${distinctId} at ${timestamp} (${variant} group)`
+          );
+        }
+      }
+
+      const shouldSendPropertyAmountEvent =
+        variant === "control" ? Math.random() < 0.4 : Math.random() < 0.5;
+      if (shouldSendPropertyAmountEvent) {
+        const timestamp = new Date(
+          firstEventTime + Math.random() * (now - firstEventTime)
+        ).toISOString();
+        posthog.capture({
+          event: propertyAmountEvent,
+          distinctId,
+          timestamp,
+          properties: {
+            [`$feature/${flag}`]: variant,
+            amount: 200 * Math.random() + 1,
+          },
+        });
+        console.log(
+          `Sent ${propertyAmountEvent} for ${distinctId} at ${timestamp} (${variant} group)`
+        );
+      }
+    }
+
+    await posthog.shutdown();
+    console.log(`Sent events for ${flag} experiment`);
+  });
+
+program
   .command("mock-experiment-events")
   .argument(
     "<type>",
