@@ -63,6 +63,22 @@ program
           timestamp,
         });
       }
+
+      const propertyAmountTimestamp = new Date(
+        Date.now() - 12 * 60 * 60 * 1000
+      ).toISOString();
+      posthog.capture({
+        event: propertyAmountEvent,
+        distinctId,
+        timestamp: propertyAmountTimestamp,
+        properties: {
+          amount: 200 * Math.random() + 1,
+        },
+      });
+      console.log(
+        `Sent ${propertyAmountEvent} for ${distinctId} at ${propertyAmountTimestamp}`
+      );
+
       await posthog.shutdown();
       console.log(`Sent initial events for ${flag}`);
       return;
