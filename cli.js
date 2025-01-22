@@ -87,7 +87,7 @@ program
     const startDate = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).getTime();
     const now = Date.now();
 
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 25; i++) {
       const distinctId = `test-user-${generateRandomString(10)}@example.com`;
 
       // Generate random timestamp between start_date and now for first event
@@ -108,11 +108,11 @@ program
       });
       console.log(`${flag} variant for ${distinctId} is ${variant}`);
 
-      for (const event of funnelEvents) {
+      for (const [index, event] of funnelEvents.entries()) {
         // Only send event with probability based on variant
         const shouldSendFunnelEvent =
-          variant === "control" ? Math.random() < 0.8 : Math.random() < 0.7;
-        if (shouldSendFunnelEvent) {
+          variant === "control" ? Math.random() < 0.51 : Math.random() < 0.5;
+        if (index === 0 || shouldSendFunnelEvent) {
           const timestamp = new Date(
             firstEventTime + Math.random() * (now - firstEventTime)
           ).toISOString();
