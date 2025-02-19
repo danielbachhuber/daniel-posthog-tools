@@ -441,7 +441,7 @@ program
           event: `[${flag}] payment`,
           distinctId,
           timestamp: secondEventTime.toISOString,
-          properties: { [`$feature/${flag}`]: variant },
+          properties: { [`$feature/${flag}`]: variant, amount },
         });
       }
     }
