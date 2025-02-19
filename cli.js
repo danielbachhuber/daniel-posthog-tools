@@ -303,11 +303,6 @@ program
   .command("mock-data-warehouse-experiment")
   .argument("<flag>", "The flag associated with the experiment")
   .option(
-    "--start_date <date>",
-    "Start date for events",
-    new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
-  )
-  .option(
     "--send-initial-events",
     "Send the initial events for the experiment",
     false
@@ -376,47 +371,62 @@ program
       return;
     }
 
-    const startDate = new Date(options.start_date).getTime();
+    const startDate = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).getTime();
     const now = Date.now();
 
     for (let i = 0; i < 200; i++) {
       const distinctId = `test-user-${generateRandomString(10)}@example.com`;
 
+      // Generate random timestamp between start_date and now for first event
+      const firstEventTime = startDate + Math.random() * (now - startDate);
+      const firstEventTimestamp = new Date(firstEventTime).toISOString();
+
+      // Randomly assign control or test (50/50 split)
+      const random = Math.random();
+      const variant = random < 0.5 ? "control" : "test";
+      posthog.capture({
+        event: "$feature_flag_called",
+        distinctId,
+        timestamp: firstEventTimestamp,
+        properties: {
+          [`$feature_flag`]: flag,
+          [`$feature/${flag}`]: variant,
+          [`$feature_flag_response`]: variant,
+        },
+      });
+      console.log(`${flag} variant for ${distinctId} is ${variant}`);
+
       posthog.capture({
         event: `[${flag}] seen`,
         distinctId,
+        timestamp: firstEventTimestamp,
+        properties: { [`$feature/${flag}`]: variant },
       });
       console.log(`Sent seen event for ${distinctId}`);
-
-      // Sleep for 1-3 seconds
-      await new Promise((resolve) =>
-        setTimeout(resolve, 1000 + Math.random() * 2000)
-      );
-
-      // 60% chance to get feature flag
-      let variant;
-      if (Math.random() < 0.6) {
-        variant = await posthog.getFeatureFlag(flag, distinctId);
-        console.log(`${flag} variant for ${distinctId} is ${variant}`);
-      }
 
       // 80% chance to generate payment
       if (Math.random() < 0.8) {
         const amount = 2 + Math.random() * 18; // Random amount between 2 and 20
 
-        // Sleep for 1-3 seconds
-        await new Promise((resolve) =>
-          setTimeout(resolve, 1000 + Math.random() * 2000)
+        // Add 5-30 minutes to first event timestamp for second event
+        const minutesToAdd = 5 + Math.random() * 25;
+
+        // Ensure second event time doesn't exceed current time
+        const secondEventTime = new Date(
+          Math.min(firstEventTime + minutesToAdd * 60 * 1000, now)
         );
-        const now = new Date();
-        const mysqlDatetime = `${now.getUTCFullYear()}-${String(
-          now.getUTCMonth() + 1
-        ).padStart(2, "0")}-${String(now.getUTCDate()).padStart(
+
+        const mysqlDatetime = `${secondEventTime.getUTCFullYear()}-${String(
+          secondEventTime.getUTCMonth() + 1
+        ).padStart(2, "0")}-${String(secondEventTime.getUTCDate()).padStart(
           2,
           "0"
-        )} ${String(now.getUTCHours()).padStart(2, "0")}:${String(
-          now.getUTCMinutes()
-        ).padStart(2, "0")}:${String(now.getUTCSeconds()).padStart(2, "0")}`;
+        )} ${String(secondEventTime.getUTCHours()).padStart(2, "0")}:${String(
+          secondEventTime.getUTCMinutes()
+        ).padStart(2, "0")}:${String(secondEventTime.getUTCSeconds()).padStart(
+          2,
+          "0"
+        )}`;
 
         await connection.execute(
           "INSERT INTO payments (timestamp, distinct_id, amount) VALUES (?, ?, ?)",
@@ -430,7 +440,8 @@ program
         posthog.capture({
           event: `[${flag}] payment`,
           distinctId,
-          properties: variant ? { [`$feature/${flag}`]: variant } : undefined,
+          timestamp: secondEventTime.toISOString,
+          properties: { [`$feature/${flag}`]: variant },
         });
       }
     }
@@ -438,6 +449,7 @@ program
     await posthog.shutdown();
 
     await connection.end();
+    console.log("The end");
   });
 
 if (process.argv.length === 2) {
