@@ -94,9 +94,10 @@ program
       const firstEventTime = startDate + Math.random() * (now - startDate);
       const firstEventTimestamp = new Date(firstEventTime).toISOString();
 
-      // Randomly assign control or test (50/50 split)
+      // Randomly assign control, test, or test_2 (33/33/33 split)
       const random = Math.random();
-      const variant = random < 0.5 ? "control" : "test";
+      const variant =
+        random < 0.33 ? "control" : random < 0.66 ? "test" : "test_2";
       posthog.capture({
         event: "$feature_flag_called",
         distinctId,
@@ -111,7 +112,11 @@ program
       for (const [index, event] of funnelEvents.entries()) {
         // Only send event with probability based on variant
         const shouldSendFunnelEvent =
-          variant === "control" ? Math.random() < 0.51 : Math.random() < 0.5;
+          variant === "control"
+            ? Math.random() < 0.51
+            : variant === "test"
+            ? Math.random() < 0.5
+            : Math.random() < 0.49; // test_2
         if (index === 0 || shouldSendFunnelEvent) {
           const timestamp = new Date(
             firstEventTime + Math.random() * (now - firstEventTime)
@@ -132,7 +137,11 @@ program
 
       for (const event of trendEvents) {
         const shouldSendTrendEvent =
-          variant === "control" ? Math.random() < 0.4 : Math.random() < 0.5;
+          variant === "control"
+            ? Math.random() < 0.4
+            : variant === "test"
+            ? Math.random() < 0.5
+            : Math.random() < 0.6; // test_2
         if (shouldSendTrendEvent) {
           const timestamp = new Date(
             firstEventTime + Math.random() * (now - firstEventTime)
@@ -152,7 +161,11 @@ program
       }
 
       const shouldSendPropertyAmountEvent =
-        variant === "control" ? Math.random() < 0.4 : Math.random() < 0.5;
+        variant === "control"
+          ? Math.random() < 0.4
+          : variant === "test"
+          ? Math.random() < 0.5
+          : Math.random() < 0.6; // test_2
       if (shouldSendPropertyAmountEvent) {
         const timestamp = new Date(
           firstEventTime + Math.random() * (now - firstEventTime)
