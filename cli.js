@@ -104,6 +104,7 @@ program
         timestamp: firstEventTimestamp,
         properties: {
           [`$feature_flag`]: flag,
+          [`$feature/${flag}`]: variant,
           [`$feature_flag_response`]: variant,
         },
       });
