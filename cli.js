@@ -96,11 +96,16 @@ program
 
       // Generate a random organization name with two words from a list of five words
       const organizationWords = [
-        "Global",
-        "Tech",
-        "Digital",
-        "Modern",
-        "Smart",
+        "Innovative",
+        "Strategic",
+        "Advanced",
+        "Premier",
+        "Dynamic",
+        "Creative",
+        "Unified",
+        "Quantum",
+        "Stellar",
+        "Apex",
       ];
 
       function getRandomWord(wordArray) {
