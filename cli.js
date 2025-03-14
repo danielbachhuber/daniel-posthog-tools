@@ -94,6 +94,44 @@ program
       const firstEventTime = startDate + Math.random() * (now - startDate);
       const firstEventTimestamp = new Date(firstEventTime).toISOString();
 
+      // Generate a random organization name with two words from a list of five words
+      const organizationWords = [
+        "Global",
+        "Tech",
+        "Digital",
+        "Modern",
+        "Smart",
+      ];
+
+      function getRandomWord(wordArray) {
+        return wordArray[Math.floor(Math.random() * wordArray.length)];
+      }
+      const randomOrgName = `${getRandomWord(
+        organizationWords
+      )} ${getRandomWord(organizationWords)}`;
+      const randomOrgKey = randomOrgName.toLowerCase().replace(/\s+/g, "-");
+
+      console.log(
+        `Generated organization name: ${randomOrgName} (${randomOrgKey})`
+      );
+
+      const groups = {
+        organization: randomOrgKey,
+      };
+
+      posthog.capture({
+        event: "$groupidentify",
+        distinctId,
+        timestamp: firstEventTimestamp,
+        properties: {
+          $group_type: "organization",
+          $group_key: groups.organization,
+          $group_set: {
+            name: randomOrgName,
+          },
+        },
+      });
+
       // Randomly assign control, test, or test_2 (33/33/33 split)
       const random = Math.random();
       const variant =
@@ -107,6 +145,7 @@ program
           [`$feature/${flag}`]: variant,
           [`$feature_flag_response`]: variant,
         },
+        groups,
       });
       console.log(`${flag} variant for ${distinctId} is ${variant}`);
 
@@ -129,6 +168,7 @@ program
             properties: {
               [`$feature/${flag}`]: variant,
             },
+            groups,
           });
           console.log(
             `Sent ${event} for ${distinctId} at ${timestamp} (${variant} group)`
@@ -154,6 +194,7 @@ program
             properties: {
               [`$feature/${flag}`]: variant,
             },
+            groups,
           });
           console.log(
             `Sent ${event} for ${distinctId} at ${timestamp} (${variant} group)`
@@ -179,6 +220,7 @@ program
             [`$feature/${flag}`]: variant,
             amount: 200 * Math.random() + 1,
           },
+          groups,
         });
         console.log(
           `Sent ${propertyAmountEvent} for ${distinctId} at ${timestamp} (${variant} group)`
