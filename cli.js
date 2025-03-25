@@ -114,7 +114,7 @@ program
       const randomOrgName = `${getRandomWord(
         organizationWords
       )} ${getRandomWord(organizationWords)}`;
-      const randomOrgKey = randomOrgName.toLowerCase().replace(/\s+/g, "-");
+      const randomOrgKey = randomOrgName.toLowerCase().replace(/\s+/g, "::");
 
       console.log(
         `Generated organization name: ${randomOrgName} (${randomOrgKey})`
