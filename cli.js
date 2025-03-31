@@ -154,6 +154,17 @@ program
       });
       console.log(`${flag} variant for ${distinctId} is ${variant}`);
 
+      posthog.capture({
+        event: "$pageview",
+        distinctId,
+        timestamp: firstEventTimestamp,
+        properties: {
+          [`$feature/${flag}`]: variant,
+        },
+        groups,
+      });
+      console.log(`Sent $pageview for ${distinctId} at ${firstEventTimestamp}`);
+
       for (const [index, event] of funnelEvents.entries()) {
         // Only send event with probability based on variant
         const shouldSendFunnelEvent =
